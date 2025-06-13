@@ -8,3 +8,4 @@ sentence-transformers
 openai
 tiktoken
 langchain-openai
+protobuf==3.20.*
