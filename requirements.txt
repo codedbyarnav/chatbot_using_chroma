@@ -3,9 +3,11 @@ python-dotenv
 langchain
 langchain-community
 langchain-huggingface
-chromadb[server]
 sentence-transformers
 openai
 tiktoken
 langchain-openai
 protobuf==3.20.*
+chromadb==0.4.24
+opentelemetry-exporter-otlp==1.22.0
+
