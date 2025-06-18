@@ -9,4 +9,4 @@ openai
 tiktoken
 langchain-openai
 protobuf==3.20.*
-numpy==1.24.4
+numpy>=1.26.0
