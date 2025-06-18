@@ -12,7 +12,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma  # ✅ Changed from FAISS
 
 # Load API key securely
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Streamlit page config
 st.set_page_config(page_title="RealMe.AI - Ask Arnav", page_icon="🧠")
