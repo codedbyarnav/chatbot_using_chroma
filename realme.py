@@ -1,6 +1,7 @@
 # streamlit_app.py
 import os
 os.environ["CHROMA_TELEMETRY"] = "False"
+os.environ["CHROMA_SERVER_IMPL"] = "local"
 
 import streamlit as st
 from langchain.chat_models import ChatOpenAI
