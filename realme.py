@@ -8,17 +8,20 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.memory import ConversationEntityMemory
 from langchain.callbacks.base import BaseCallbackHandler
+from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma  # ✅ Changed from FAISS
 
-# Load API key securely
+# Load OpenAI API key securely
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    st.error("OPENAI_API_KEY not found in environment variables.")
+    st.stop()
 
-# Streamlit page config
+# Streamlit config
 st.set_page_config(page_title="RealMe.AI - Ask Arnav", page_icon="🧠")
 
 # Constants
-VECTOR_STORE_PATH = "vectorstore/db_chroma"  # ✅ Changed path to Chroma DB
+VECTOR_STORE_PATH = "vectorstore/db_chroma"
 PROMPT_TEMPLATE = """
 You are Arnav Atri's AI twin. You will carry a memory of Arnav's life and conversations with users.
 
@@ -38,14 +41,15 @@ New user input:
 Reply as Arnav:
 """
 
-# Embeddings and vector store loader
+# Load embeddings (force CPU to avoid deployment errors)
 def load_embeddings():
-    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2", model_kwargs={"device": "cpu"})
 
+# Load vector DB from disk
 def load_vectorstore(embeddings):
     return Chroma(persist_directory=VECTOR_STORE_PATH, embedding_function=embeddings)
 
-# Streaming handler to stream inside chat bubble
+# Custom callback handler for live streaming
 class StreamHandler(BaseCallbackHandler):
     def __init__(self, container):
         self.container = container
@@ -56,7 +60,7 @@ class StreamHandler(BaseCallbackHandler):
             self.text += token
             self.container.markdown(self.text + "▌")
 
-# Chain builder with Entity Memory and RAG
+# RAG + Memory chain builder
 def get_rag_entity_chain(stream_handler):
     llm = ChatOpenAI(
         model_name="gpt-3.5-turbo",
@@ -71,7 +75,7 @@ def get_rag_entity_chain(stream_handler):
         input_key="input",
         return_messages=True,
         human_prefix="you",
-        ai_prefix="I"
+        ai_prefix="I",
     )
 
     embeddings = load_embeddings()
@@ -93,34 +97,33 @@ def get_rag_entity_chain(stream_handler):
     retriever_wrapper = RetrieverWrapper(vector_db.as_retriever())
 
     class RAGEntityChain(LLMChain):
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-
         def invoke(self, inputs):
-            context = retriever_wrapper.get_context(inputs["input"])
-            inputs["context"] = context
+            inputs["context"] = retriever_wrapper.get_context(inputs["input"])
             return super().invoke(inputs)
 
     return RAGEntityChain(llm=llm, prompt=prompt, memory=memory, verbose=False)
 
-# Header
+# --- UI ---
+
+# Page header
 st.markdown("<h1 style='text-align: center;'>🧠 RealMe.AI</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align: center; color: gray;'>Ask anything about Arnav Atri</h4>", unsafe_allow_html=True)
 st.divider()
 
-# Initialize chat chain once
+# Initialize RAG chain once
 if "chat_chain" not in st.session_state:
     dummy_container = st.empty()
     stream_handler = StreamHandler(dummy_container)
     st.session_state.chat_chain = get_rag_entity_chain(stream_handler)
 
-# Show previous messages
+# Display past chat history
 for message in st.session_state.chat_chain.memory.chat_memory.messages:
-    with st.chat_message("user" if message.type == "human" else "assistant",
-                         avatar="🧑‍💻" if message.type == "human" else "🤖"):
+    role = "user" if message.type == "human" else "assistant"
+    avatar = "🧑‍💻" if role == "user" else "🤖"
+    with st.chat_message(role, avatar=avatar):
         st.markdown(message.content)
 
-# Input box
+# Chat input
 user_input = st.chat_input("Ask Arnav anything...")
 if user_input:
     with st.chat_message("user", avatar="🧑‍💻"):
@@ -130,15 +133,15 @@ if user_input:
         stream_placeholder = st.empty()
         stream_handler = StreamHandler(stream_placeholder)
 
-        # Use the existing memory-enabled chain
+        # Update handler for new response
         chat_chain = st.session_state.chat_chain
         chat_chain.llm.callbacks = [stream_handler]
 
-        # Streaming response (invoke returns None)
+        # Stream response
         chat_chain.invoke({"input": user_input})
 
-        # Re-render the clean final output (removes trailing ▌ and avoids "None")
-        final_response = stream_handler.text.strip().replace("None", "").replace("NONE", "")
+        # Final render without trailing artifacts
+        final_response = stream_handler.text.strip().replace("None", "")
         stream_placeholder.markdown(final_response)
 
 # Footer
