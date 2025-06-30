@@ -47,11 +47,9 @@ Reply as Arnav:
 def load_embeddings():
     return HuggingFaceEmbeddings(
         model_name="all-MiniLM-L6-v2",
-        model_kwargs={
-            "device": "cpu"
-        },
-        cache_folder=".hf_cache"  # ✅ Added line
+        model_kwargs={"device": "cpu"}  # ✅ Force CPU to avoid meta tensor errors
     )
+
 
 
 # Load vector DB from disk
