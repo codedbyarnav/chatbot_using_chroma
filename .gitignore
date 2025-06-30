@@ -1,0 +1,15 @@
+# Ignore Hugging Face model cache
+hf_cache/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environments
+venv/
+env/
+
+# Ignore system files
+.DS_Store
