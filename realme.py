@@ -43,14 +43,8 @@ Reply as Arnav:
 """
 
 # Load embeddings (force CPU to avoid deployment errors)
-@st.cache_resource(show_spinner="Loading embeddings...")
 def load_embeddings():
-    return HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}  # ✅ Force CPU to avoid meta tensor errors
-    )
-
-
+    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2", model_kwargs={"device": "cpu"})
 
 # Load vector DB from disk
 def load_vectorstore(embeddings):
