@@ -1,8 +1,9 @@
 # streamlit_app.py
 import os
+__import__('pysqlite3') 
 import sys
-import pysqlite3
-sys.modules["sqlite3"] = pysqlite3
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 
 os.environ["CHROMA_TELEMETRY"] = "False"
 os.environ["CHROMA_SERVER_IMPL"] = "local"
