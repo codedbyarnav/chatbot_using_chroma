@@ -1,4 +1,7 @@
 import os, sys, warnings
+from dotenv import load_dotenv
+load_dotenv()
+
 try:
     __import__("pysqlite3")
     sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
@@ -50,24 +53,19 @@ def load_vectorstore(embeddings):
 
 class StreamHandler(BaseCallbackHandler):
     def __init__(self, container):
-        self.container, self.text = container, ""
+        self.container = container
+        self.text = ""
     def on_llm_new_token(self, token, **_):
         if token and token.strip().lower() != "none":
             self.text += token
             self.container.markdown(self.text + "▌")
 
 def get_rag_entity_chain(handler):
-    llm = ChatOpenAI(model_name="gpt-4o", openai_api_key=OPENAI_API_KEY,
-                     streaming=True, callbacks=[handler])
-
-    memory = ConversationEntityMemory(llm=llm, memory_key="history",
-                                      input_key="input", return_messages=True,
-                                      human_prefix="you", ai_prefix="I")
-
+    llm = ChatOpenAI(model_name="gpt-4o", openai_api_key=OPENAI_API_KEY, streaming=True, callbacks=[handler])
+    memory = ConversationEntityMemory(llm=llm, memory_key="history", input_key="input", return_messages=True, human_prefix="you", ai_prefix="I")
     embeddings = load_embeddings()
-    vector_db  = load_vectorstore(embeddings)
-    prompt     = PromptTemplate(input_variables=["context", "history", "input"],
-                                template=PROMPT_TEMPLATE)
+    vector_db = load_vectorstore(embeddings)
+    prompt = PromptTemplate(input_variables=["context", "history", "input"], template=PROMPT_TEMPLATE)
 
     class RetrieverWrapper:
         def __init__(self, retriever): self.retriever = retriever
@@ -78,10 +76,13 @@ def get_rag_entity_chain(handler):
     class RAGChain(LLMChain):
         def invoke(self, inputs):
             inputs["context"] = retriever_wrapper.get_context(inputs["input"])
+            hist_lines = []
+            for m in memory.chat_memory.messages:
+                prefix = "you" if m.type == "human" else "I"
+                hist_lines.append(f"{prefix}: {m.content}")
+            inputs["history"] = "\n".join(hist_lines)
             final_prompt = prompt.format(**inputs)
-            print("🔍 User Input:", inputs["input"])
-            print("📄 Retrieved Context:\n", inputs["context"])
-            print("🧾 Final Prompt Sent to LLM:\n", final_prompt)
+            st.session_state["last_prompt"] = final_prompt
             return super().invoke(inputs)
 
     return RAGChain(llm=llm, prompt=prompt, memory=memory, verbose=False)
@@ -90,14 +91,18 @@ st.markdown("<h1 style='text-align:center'>🧠 RealMe.AI</h1>", unsafe_allow_ht
 st.markdown("<h4 style='text-align:center;color:gray'>Ask anything about Arnav Atri</h4>", unsafe_allow_html=True)
 st.divider()
 
+with st.sidebar:
+    st.markdown("### 🧾 Prompt sent to LLM")
+    st.code(st.session_state.get("last_prompt", "Send a message to view prompt."), language="markdown")
+
 if "chat_chain" not in st.session_state:
     st.session_state.chat_chain = get_rag_entity_chain(StreamHandler(st.empty()))
 
-for m in st.session_state.chat_chain.memory.chat_memory.messages:
-    role = "user" if m.type == "human" else "assistant"
+for msg in st.session_state.chat_chain.memory.chat_memory.messages:
+    role = "user" if msg.type == "human" else "assistant"
     avatar = "🧑‍💻" if role == "user" else "🤖"
     with st.chat_message(role, avatar=avatar):
-        st.markdown(m.content)
+        st.markdown(msg.content)
 
 user_input = st.chat_input("Ask Arnav anything…")
 if user_input:
