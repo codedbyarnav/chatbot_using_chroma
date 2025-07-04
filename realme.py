@@ -81,8 +81,6 @@ def get_rag_entity_chain(handler):
                 prefix = "you" if m.type == "human" else "I"
                 hist_lines.append(f"{prefix}: {m.content}")
             inputs["history"] = "\n".join(hist_lines)
-            final_prompt = prompt.format(**inputs)
-            st.session_state["last_prompt"] = final_prompt
             return super().invoke(inputs)
 
     return RAGChain(llm=llm, prompt=prompt, memory=memory, verbose=False)
@@ -90,10 +88,6 @@ def get_rag_entity_chain(handler):
 st.markdown("<h1 style='text-align:center'>🧠 RealMe.AI</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align:center;color:gray'>Ask anything about Arnav Atri</h4>", unsafe_allow_html=True)
 st.divider()
-
-with st.sidebar:
-    st.markdown("### 🧾 Prompt sent to LLM")
-    st.code(st.session_state.get("last_prompt", "Send a message to view prompt."), language="markdown")
 
 if "chat_chain" not in st.session_state:
     st.session_state.chat_chain = get_rag_entity_chain(StreamHandler(st.empty()))
