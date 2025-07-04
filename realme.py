@@ -61,7 +61,7 @@ class StreamHandler(BaseCallbackHandler):
             self.container.markdown(self.text + "▌")
 
 def get_rag_entity_chain(handler):
-    llm = ChatOpenAI(model_name="gpt-4-turbo", openai_api_key=OPENAI_API_KEY, streaming=True, callbacks=[handler])
+    llm = ChatOpenAI(model_name="gpt-4o", openai_api_key=OPENAI_API_KEY, streaming=True, callbacks=[handler])
     memory = ConversationEntityMemory(llm=llm, memory_key="history", input_key="input", return_messages=True, human_prefix="you", ai_prefix="I")
     embeddings = load_embeddings()
     vector_db = load_vectorstore(embeddings)
