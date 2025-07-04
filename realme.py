@@ -57,7 +57,7 @@ class StreamHandler(BaseCallbackHandler):
             self.container.markdown(self.text + "▌")
 
 def get_rag_entity_chain(handler):
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", openai_api_key=OPENAI_API_KEY,
+    llm = ChatOpenAI(model_name="gpt-4o", openai_api_key=OPENAI_API_KEY,
                      streaming=True, callbacks=[handler])
 
     memory = ConversationEntityMemory(llm=llm, memory_key="history",
